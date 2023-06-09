@@ -13,6 +13,10 @@ pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<Comma
     if amount < 0 {
         return "you can't withdraw negative".to_owned();
     }
+    
+    if amount == 0 {
+        return "no".to_owned();
+    }
 
     let money: i64 = match user_data.get("money") {
         Some(money) => money.as_i64().unwrap(),
@@ -32,5 +36,5 @@ pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<Comma
     user_data.insert("bank_money", bank_money - amount);
     save_userdata_doc(user.id, &user_data).await;
 
-    return format!("you withdrew {}, you now have {} on you", amount, money + amount);
+    return format!("you withdrew `{} ris`, you now have `{} ris` in cash", amount, money + amount);
 }

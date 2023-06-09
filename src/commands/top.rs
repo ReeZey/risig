@@ -28,15 +28,15 @@ pub(crate) async fn run() -> String {
         };
 
         let username = user_data.get("username").unwrap().as_str().unwrap().to_string();
-        all_money.push((money + bank_money, username));
+        all_money.push((username, money, bank_money));
     }
 
-    all_money.sort_by_key(|item| item.0);
+    all_money.sort_by_key(|item| item.1 + item.2);
     all_money.reverse();
 
     let mut top_string: String = String::default();
     for user in all_money[0..min(all_money.len(), 5)].iter() {
-        top_string += &format!("{}: {}\n",user.1, user.0);
+        top_string += &format!("{}: `{} total ris` [cash {} / bank {}]\n", user.0, user.1 + user.2, user.1, user.2);
     }
 
     return top_string;

@@ -36,5 +36,5 @@ pub(crate) async fn run(user: User, mut user_data: Document) -> String {
     
     save_userdata_doc(user.id, &user_data).await;
 
-    return format!("you worked so much!! here money!!! {}, now you have {} money!!!", work_money, money + work_money);
+    return format!("you earned `{} ris` for working, now you have `{} ris`", work_money, money + work_money);
 }

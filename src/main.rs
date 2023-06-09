@@ -4,6 +4,7 @@ use std::path::Path;
 use bson::Document;
 use serenity::async_trait;
 use serenity::model::gateway::Ready;
+use serenity::model::prelude::GuildId;
 use serenity::model::prelude::command::{Command, CommandOptionType};
 use serenity::model::prelude::interaction::{Interaction, InteractionResponseType};
 use serenity::prelude::*;
@@ -13,7 +14,7 @@ use commands::{work, ping, top, balance};
 use tokio::fs;
 use utils::{get_userdata_doc, save_userdata_doc};
 
-use crate::commands::{requestmydata, deposit, withdraw};
+use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba};
 
 mod utils;
 
@@ -58,6 +59,9 @@ impl EventHandler for Handler {
                 "requestmydata" => requestmydata::run(user_data).await,
                 "deposit" => deposit::run(user, user_data, &command.data.options).await,
                 "withdraw" => withdraw::run(user, user_data, &command.data.options).await,
+                "donate" => donate::run(user, user_data, &command.data.options).await,
+                "checkup" => checkup::run(&command.data.options).await,
+                "gamba" => gamba::run(user, user_data, &command.data.options).await,
                 _ => "mitä 🇫🇮".to_string(),
             };
 
@@ -73,7 +77,14 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
 
-        Command::set_global_application_commands(&ctx.http, |commands| {
+        let guild_id = GuildId(
+            env::var("GUILD_ID")
+                .expect("Expected GUILD_ID in environment")
+                .parse()
+                .expect("GUILD_ID must be an integer"),
+        );
+
+        GuildId::set_application_commands(&guild_id, &ctx.http, |commands| {
             commands.create_application_command(|command| ping::register(command))
                     .create_application_command(|command| requestmydata::register(command))
                     .create_application_command(|command| top::register(command))
@@ -81,14 +92,36 @@ impl EventHandler for Handler {
                     .create_application_command(|command| balance::register(command))
                     .create_application_command(|command| deposit::register(command)
                         .create_option(|option| {
-                            option.name("amount").description("amount").kind(CommandOptionType::Integer).required(true)
+                            option.name("amount").description("amount of deposit").kind(CommandOptionType::Integer).required(true)
                         })
                     )
                     .create_application_command(|command| withdraw::register(command)
                         .create_option(|option| {
-                            option.name("amount").description("amount").kind(CommandOptionType::Integer).required(true)
+                            option.name("amount").description("amount of withdraw").kind(CommandOptionType::Integer).required(true)
                         })
                     )
+                    .create_application_command(|command| donate::register(command)
+                        .create_option(|option| {
+                            option.name("who").description("user to give money").kind(CommandOptionType::User).required(true)
+                        })
+                        .create_option(|option| {
+                            option.name("amount").description("amount of money").kind(CommandOptionType::Integer).required(true)
+                        })
+                    )
+                    .create_application_command(|command| checkup::register(command)
+                        .create_option(|option| {
+                            option.name("who").description("user to check money").kind(CommandOptionType::User).required(true)
+                        })
+                    )
+                    .create_application_command(|command| gamba::register(command)
+                        .create_option(|option| {
+                            option.name("amount").description("amount to GAMBA").kind(CommandOptionType::Integer).required(true)
+                        })
+                    )
+        }).await.unwrap();
+
+        Command::set_global_application_commands(&ctx.http, |commands| {
+            commands
         }).await.unwrap();
 
         //println!("I now have the following guild slash commands: {:#?}", commands);
