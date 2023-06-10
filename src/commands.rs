@@ -8,3 +8,5 @@ pub(crate) mod balance;
 pub(crate) mod donate;
 pub(crate) mod checkup;
 pub(crate) mod gamba;
+pub(crate) mod rob;
+pub(crate) mod daily;

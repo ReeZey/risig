@@ -4,17 +4,17 @@ use std::path::Path;
 use bson::Document;
 use serenity::async_trait;
 use serenity::model::gateway::Ready;
-use serenity::model::prelude::GuildId;
+use serenity::model::prelude::{GuildId, Message};
 use serenity::model::prelude::command::{Command, CommandOptionType};
-use serenity::model::prelude::interaction::{Interaction, InteractionResponseType};
+use serenity::model::prelude::interaction::{Interaction, InteractionResponseType, MessageFlags};
 use serenity::prelude::*;
 
 mod commands;
-use commands::{work, ping, top, balance};
+use commands::{work, ping, top, balance, daily};
 use tokio::fs;
-use utils::{get_userdata_doc, save_userdata_doc};
+use utils::{get_userdata_doc, save_userdata_doc, CommandResponse};
 
-use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba};
+use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob};
 
 mod utils;
 
@@ -31,6 +31,18 @@ impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         if let Interaction::ApplicationCommand(command) = interaction {
             //println!("Received command interaction: {:#?}", command);
+
+            if command.channel_id != 1117126467252404275 {
+                if let Err(why) = command.create_interaction_response(&ctx.http, |response| {
+                    response.kind(InteractionResponseType::ChannelMessageWithSource)
+                        .interaction_response_data(|message| 
+                            message.content("you can only use the bot in <#1117126467252404275>").flags(MessageFlags::EPHEMERAL)
+                        )
+                }).await {
+                    println!("Cannot respond to slash command: {}", why);
+                };
+                return
+            }
 
             let user = command.member.clone().unwrap().user;
             let mut user_data = get_userdata_doc(user.id).await;
@@ -51,9 +63,10 @@ impl EventHandler for Handler {
                 save_userdata_doc(user.id, &user_data).await;
             }
 
-            let content = match command.data.name.as_str() {
-                "ping" => ping::run().await,
+            let command_response: CommandResponse = match command.data.name.as_str() {
+                "ping" => ping::run(),
                 "work" => work::run(user, user_data).await,
+                "daily" => daily::run(user, user_data).await,
                 "top"  => top::run().await,
                 "balance" => balance::run(user_data).await,
                 "requestmydata" => requestmydata::run(user_data).await,
@@ -61,13 +74,22 @@ impl EventHandler for Handler {
                 "withdraw" => withdraw::run(user, user_data, &command.data.options).await,
                 "donate" => donate::run(user, user_data, &command.data.options).await,
                 "checkup" => checkup::run(&command.data.options).await,
+                "rob" => rob::run(user, user_data, &command.data.options).await,
                 "gamba" => gamba::run(user, user_data, &command.data.options).await,
-                _ => "mitä 🇫🇮".to_string(),
+                _ => CommandResponse::new("mitä 🇫🇮".to_string(), true),
             };
+
+            let mut flags = MessageFlags::default();
+
+            if command_response.hidden {
+                flags |= MessageFlags::EPHEMERAL;
+            }
 
             if let Err(why) = command.create_interaction_response(&ctx.http, |response| {
                     response.kind(InteractionResponseType::ChannelMessageWithSource)
-                        .interaction_response_data(|message| message.content(content))
+                        .interaction_response_data(|message| 
+                            message.content(command_response.content).flags(flags)
+                        )
             }).await {
                 println!("Cannot respond to slash command: {}", why);
             };
@@ -89,6 +111,7 @@ impl EventHandler for Handler {
                     .create_application_command(|command| requestmydata::register(command))
                     .create_application_command(|command| top::register(command))
                     .create_application_command(|command| work::register(command))
+                    .create_application_command(|command| daily::register(command))
                     .create_application_command(|command| balance::register(command))
                     .create_application_command(|command| deposit::register(command)
                         .create_option(|option| {
@@ -109,6 +132,11 @@ impl EventHandler for Handler {
                         })
                     )
                     .create_application_command(|command| checkup::register(command)
+                        .create_option(|option| {
+                            option.name("who").description("user to check money").kind(CommandOptionType::User).required(true)
+                        })
+                    )
+                    .create_application_command(|command| rob::register(command)
                         .create_option(|option| {
                             option.name("who").description("user to check money").kind(CommandOptionType::User).required(true)
                         })

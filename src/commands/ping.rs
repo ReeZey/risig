@@ -1,11 +1,13 @@
 use serenity::builder::CreateApplicationCommand;
 
+use crate::utils::CommandResponse;
+
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("ping").description("pong")
 }
 
-pub async fn run() -> String {
-    "pong".to_string()
+pub fn run() -> CommandResponse {
+    return CommandResponse::new("pong".to_owned(), true);
 }
 
 
