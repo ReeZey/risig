@@ -1,14 +1,12 @@
 use bson::Document;
 use crate::utils::{save_userdata_doc, get_userdata_doc};
-use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::{interaction::application_command::{CommandDataOption, CommandDataOptionValue}, PartialMember}}};
+use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::{interaction::application_command::{CommandDataOption, CommandDataOptionValue}}}};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("donate").description("donate moni")
 }
 
 pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<CommandDataOption>) -> String {
-    //let amount: i64 = options.get(0).unwrap().value.unwrap().as_i64().unwrap();
-
     let target = if let CommandDataOptionValue::User(target, _member) = options.get(0).unwrap().resolved.as_ref().unwrap() {
         target
     } else {
@@ -17,7 +15,7 @@ pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<Comma
 
     let target_data = get_userdata_doc(target.id).await;
     if target_data.is_none() {
-        return "user not found, the user must have used risig atleast once".to_owned();
+        return "user not found, the user must have used <@568163802907148307> atleast once".to_owned();
     }
     let mut target_data = target_data.unwrap();
 
