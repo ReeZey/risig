@@ -57,6 +57,10 @@ impl EventHandler for Handler {
                 save_userdata_doc(user.id, &user_data).await;
             }
 
+            //println!("{:#?}", command);
+
+            println!("{}: {}", user.name, command.data.name.as_str());
+
             match command.data.name.as_str() {
                 "ping" => ping::run(&mut command, &ctx).await,
                 "work" => work::run(&mut command, &ctx, user, user_data).await,
