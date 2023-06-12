@@ -1,16 +1,16 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use bson::Document;
-use serenity::model::user::User;
+use serenity::{model::{user::User, prelude::interaction::{MessageFlags, application_command::ApplicationCommandInteraction}}, prelude::Context};
 use rand::Rng;
-use crate::utils::{save_userdata_doc, format_duration, CommandResponse};
+use crate::utils::{save_userdata_doc, format_duration, send_command_response};
 use serenity::builder::CreateApplicationCommand;
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("work").description("work work")
 }
 
-pub(crate) async fn run(user: User, mut user_data: Document) -> CommandResponse {
+pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
     let time = SystemTime::now();
     let now = time.duration_since(UNIX_EPOCH).unwrap().as_millis() as i64;
 
@@ -20,7 +20,8 @@ pub(crate) async fn run(user: User, mut user_data: Document) -> CommandResponse 
 
         if now < last {
             let next_time = Duration::from_millis((last - now) as u64);
-            return CommandResponse::new(format!("you are tired, you need to wait {}", format_duration(next_time)), true);
+            send_command_response(command, &ctx, &format!("you are tired, you need to wait {}", format_duration(next_time)), MessageFlags::EPHEMERAL).await;
+            return
         }
     }
     
@@ -38,5 +39,5 @@ pub(crate) async fn run(user: User, mut user_data: Document) -> CommandResponse 
     
     save_userdata_doc(user.id, &user_data).await;
 
-    return CommandResponse::new(format!("you earned `{} ris` for working, now you have `{} ris`", work_money, money + work_money), false);
+    send_command_response(command, &ctx, &format!("you earned `{} ris` for working, now you have `{} ris`", work_money, money + work_money), MessageFlags::default()).await;
 }

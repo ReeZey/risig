@@ -1,8 +1,9 @@
 use std::{path::Path, time::Duration};
 use bson::Document;
 use tokio::{fs::File, io::AsyncWriteExt};
-use serenity::{client::Context, model::prelude::{Message, UserId, command::Command}};
+use serenity::{client::Context, model::prelude::{Message, UserId, interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}};
 use tokio::fs;
+use serenity::model::prelude::interaction::InteractionResponseType::ChannelMessageWithSource;
 
 #[allow(dead_code)]
 pub(crate) async fn send_message(ctx: &Context, msg: &Message, response: &str) {
@@ -69,18 +70,18 @@ pub(crate) fn format_duration(duration: Duration) -> String {
         return format!("{}h {}m {}s", hours, minutes, seconds);
     } else if minutes > 0 {
         return format!("{}m {}s", minutes, seconds);
-    } else {
+    } else if seconds == 0 {
         return format!("{}s", seconds);
+    } else {
+        return format!("{}ms", duration.as_millis())
     }
 }
 
-pub struct CommandResponse {
-    pub content: String,
-    pub hidden: bool
-}
-
-impl CommandResponse {
-    pub fn new(content: String, hidden: bool) -> CommandResponse {
-        return CommandResponse { content, hidden }
-    }
+pub(crate) async fn send_command_response(command: &mut ApplicationCommandInteraction, ctx: &Context, content: &str, flags: MessageFlags) {
+    command.create_interaction_response(&ctx.http, |response| {
+        response.kind(ChannelMessageWithSource)
+            .interaction_response_data(|message| 
+                message.content(content).flags(flags)
+            )
+    }).await.unwrap();
 }

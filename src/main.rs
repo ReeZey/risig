@@ -4,15 +4,15 @@ use std::path::Path;
 use bson::Document;
 use serenity::async_trait;
 use serenity::model::gateway::Ready;
-use serenity::model::prelude::{GuildId, Message};
+use serenity::model::prelude::GuildId;
 use serenity::model::prelude::command::{Command, CommandOptionType};
-use serenity::model::prelude::interaction::{Interaction, InteractionResponseType, MessageFlags};
+use serenity::model::prelude::interaction::{Interaction, MessageFlags};
 use serenity::prelude::*;
 
 mod commands;
 use commands::{work, ping, top, balance, daily};
 use tokio::fs;
-use utils::{get_userdata_doc, save_userdata_doc, CommandResponse};
+use utils::{get_userdata_doc, save_userdata_doc, send_command_response};
 
 use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob};
 
@@ -29,18 +29,12 @@ impl EventHandler for Handler {
     */
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(command) = interaction {
+        if let Interaction::ApplicationCommand(mut command) = interaction {
             //println!("Received command interaction: {:#?}", command);
 
-            if command.channel_id != 1117126467252404275 {
-                if let Err(why) = command.create_interaction_response(&ctx.http, |response| {
-                    response.kind(InteractionResponseType::ChannelMessageWithSource)
-                        .interaction_response_data(|message| 
-                            message.content("you can only use the bot in <#1117126467252404275>").flags(MessageFlags::EPHEMERAL)
-                        )
-                }).await {
-                    println!("Cannot respond to slash command: {}", why);
-                };
+            let token = env::var("MESSAGE_CHANNEL").expect("Expected a token in the environment");
+            if command.channel_id.to_string() != token {
+                send_command_response(&mut command, &ctx, &format!("you can only use the bot in <#{}>", token), MessageFlags::EPHEMERAL).await;
                 return
             }
 
@@ -63,35 +57,22 @@ impl EventHandler for Handler {
                 save_userdata_doc(user.id, &user_data).await;
             }
 
-            let command_response: CommandResponse = match command.data.name.as_str() {
-                "ping" => ping::run(),
-                "work" => work::run(user, user_data).await,
-                "daily" => daily::run(user, user_data).await,
-                "top"  => top::run().await,
-                "balance" => balance::run(user_data).await,
-                "requestmydata" => requestmydata::run(user_data).await,
-                "deposit" => deposit::run(user, user_data, &command.data.options).await,
-                "withdraw" => withdraw::run(user, user_data, &command.data.options).await,
-                "donate" => donate::run(user, user_data, &command.data.options).await,
-                "checkup" => checkup::run(&command.data.options).await,
-                "rob" => rob::run(user, user_data, &command.data.options).await,
-                "gamba" => gamba::run(user, user_data, &command.data.options).await,
-                _ => CommandResponse::new("mitä 🇫🇮".to_string(), true),
-            };
-
-            let mut flags = MessageFlags::default();
-
-            if command_response.hidden {
-                flags |= MessageFlags::EPHEMERAL;
-            }
-
-            if let Err(why) = command.create_interaction_response(&ctx.http, |response| {
-                    response.kind(InteractionResponseType::ChannelMessageWithSource)
-                        .interaction_response_data(|message| 
-                            message.content(command_response.content).flags(flags)
-                        )
-            }).await {
-                println!("Cannot respond to slash command: {}", why);
+            match command.data.name.as_str() {
+                "ping" => ping::run(&mut command, &ctx).await,
+                "work" => work::run(&mut command, &ctx, user, user_data).await,
+                "daily" => daily::run(&mut command, &ctx, user, user_data).await,
+                "top"  => top::run(&mut command, &ctx).await,
+                "balance" => balance::run(&mut command, &ctx, user_data).await,
+                "requestmydata" => requestmydata::run(&mut command, &ctx, user_data).await,
+                "deposit" => deposit::run(&mut command, &ctx, user, user_data).await,
+                "withdraw" => withdraw::run(&mut command, &ctx, user, user_data).await,
+                "donate" => donate::run(&mut command, &ctx, user, user_data).await,
+                "checkup" => checkup::run(&mut command, &ctx).await,
+                "rob" => rob::run(&mut command, &ctx, user, user_data).await,
+                "gamba" => gamba::run(&mut command, &ctx, user, user_data).await,
+                _ => {
+                    send_command_response(&mut command, &ctx, "command not found", MessageFlags::default()).await
+                },
             };
         }
     }

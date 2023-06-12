@@ -1,27 +1,30 @@
 use bson::Document;
-use crate::utils::{save_userdata_doc, get_userdata_doc, CommandResponse};
-use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::{interaction::application_command::{CommandDataOption, CommandDataOptionValue}}}};
+use serenity::{builder::CreateApplicationCommand, model::{prelude::interaction::{application_command::{ApplicationCommandInteraction, CommandDataOptionValue}, MessageFlags}, user::User}, prelude::Context};
+use crate::utils::{save_userdata_doc, get_userdata_doc, send_command_response};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("donate").description("donate moni")
 }
 
-pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<CommandDataOption>) -> CommandResponse {
-    let target = if let CommandDataOptionValue::User(target, _member) = options.get(0).unwrap().resolved.as_ref().unwrap() {
+pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
+    let target = if let CommandDataOptionValue::User(target, _member) = command.data.options.get(0).unwrap().resolved.as_ref().unwrap() {
         target
     } else {
-        return CommandResponse::new("what?".to_owned(), true);
+        send_command_response(command, &ctx, "how did you do this?", MessageFlags::EPHEMERAL).await;
+        return
     };
 
     let target_data = get_userdata_doc(target.id).await;
     if target_data.is_none() {
-        return CommandResponse::new("user not found, the user must have used <@568163802907148307> atleast once".to_owned(), true);
+        send_command_response(command, &ctx, "user not found, the user must have used <@568163802907148307> atleast once", MessageFlags::EPHEMERAL).await;
+        return
     }
     let mut target_data = target_data.unwrap();
 
-    let amount = options.get(1).unwrap().value.as_ref().unwrap().as_i64().unwrap();
+    let amount = command.data.options.get(1).unwrap().value.as_ref().unwrap().as_i64().unwrap();
     if amount < 1 {
-        return CommandResponse::new("invalid amount".to_owned(), false);
+        send_command_response(command, &ctx, "invalid amount", MessageFlags::EPHEMERAL).await;
+        return
     }
 
     let money: i64 = match user_data.get("money") {
@@ -35,7 +38,8 @@ pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<Comma
     };
 
     if amount > money {
-        return CommandResponse::new(format!("not enough money [{} < {}]", money, amount), true);
+        send_command_response(command, &ctx, &format!("not enough money [{} < {}]", money, amount), MessageFlags::EPHEMERAL).await;
+        return
     }
 
     user_data.insert("money", money - amount);
@@ -44,5 +48,5 @@ pub(crate) async fn run(user: User, mut user_data: Document, options: &Vec<Comma
     save_userdata_doc(user.id, &user_data).await;
     save_userdata_doc(target.id, &target_data).await;
 
-    return CommandResponse::new(format!("you donated `{} ris` to <@{}>", amount, target.id), false);
+    send_command_response(command, &ctx, &format!("you donated `{} ris` to <@{}>", amount, target.id), MessageFlags::default()).await;
 }

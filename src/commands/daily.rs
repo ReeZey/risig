@@ -1,15 +1,15 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use bson::Document;
-use serenity::model::user::User;
-use crate::utils::{save_userdata_doc, format_duration, CommandResponse};
+use serenity::{model::{user::User, prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}, prelude::Context};
+use crate::utils::{save_userdata_doc, format_duration, send_command_response};
 use serenity::builder::CreateApplicationCommand;
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("daily").description("daily money")
 }
 
-pub(crate) async fn run(user: User, mut user_data: Document) -> CommandResponse {
+pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
     let time = SystemTime::now();
     let now = time.duration_since(UNIX_EPOCH).unwrap().as_millis() as i64;
 
@@ -19,7 +19,8 @@ pub(crate) async fn run(user: User, mut user_data: Document) -> CommandResponse 
 
         if now < last {
             let duration = Duration::from_millis((last - now) as u64);
-            return CommandResponse::new(format!("you have already claimed your daily you need to wait {}", format_duration(duration)), true);
+            send_command_response(command, &ctx, &format!("you have already claimed your daily you need to wait {}", format_duration(duration)), MessageFlags::EPHEMERAL).await;
+            return
         }
     }
     
@@ -37,5 +38,5 @@ pub(crate) async fn run(user: User, mut user_data: Document) -> CommandResponse 
     
     save_userdata_doc(user.id, &user_data).await;
 
-    return CommandResponse::new(format!("you claimed the daily {}, you now have {}", amount, money + amount), false);
+    send_command_response(command, &ctx, &format!("you claimed the daily {}, you now have {}", amount, money + amount), MessageFlags::default()).await;
 }
