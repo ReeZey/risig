@@ -38,7 +38,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     };
 
     if amount > money {
-        send_command_response(command, &ctx, &format!("not enough money [{} < {}]", money, amount), MessageFlags::EPHEMERAL).await;
+        send_command_response(command, &ctx, &format!("you are missing `{} ris`", amount - money), MessageFlags::EPHEMERAL).await;
         return
     }
 

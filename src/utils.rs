@@ -1,19 +1,19 @@
 use std::{path::Path, time::Duration};
 use bson::Document;
 use tokio::{fs::File, io::AsyncWriteExt};
-use serenity::{client::Context, model::prelude::{Message, UserId, interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}};
+use serenity::{client::Context, model::prelude::{UserId, interaction::{application_command::ApplicationCommandInteraction, MessageFlags}, ChannelId}};
 use tokio::fs;
 use serenity::model::prelude::interaction::InteractionResponseType::ChannelMessageWithSource;
 
 #[allow(dead_code)]
-pub(crate) async fn send_message(ctx: &Context, msg: &Message, response: &str) {
-    if let Err(why) = msg.channel_id.send_message(&ctx.http, |m| m.content(response)).await {
+pub(crate) async fn send_message(ctx: &Context, channel_id: &ChannelId, response: &str) {
+    if let Err(why) = channel_id.send_message(&ctx.http, |m| m.content(response)).await {
         println!("Error sending message: {:?}", why);
     }
 }
 
 #[allow(dead_code)]
-pub(crate) async fn send_file(ctx: &Context, msg: &Message, response: Option<&str>, data: Vec<u8>, filename: &str) {
+pub(crate) async fn send_file(ctx: &Context, channel_id: &ChannelId, response: Option<&str>, data: Vec<u8>, filename: &str) {
     let files = vec![(data.as_slice(), filename)];
 
     let response = if response == None {
@@ -22,7 +22,7 @@ pub(crate) async fn send_file(ctx: &Context, msg: &Message, response: Option<&st
         response.unwrap()
     };
 
-    if let Err(why) = msg.channel_id.send_files(&ctx.http, files, |m| m.content(response)).await {
+    if let Err(why) = channel_id.send_files(&ctx.http, files, |m| m.content(response)).await {
         println!("Error sending message: {:?}", why);
     }
 }
@@ -82,6 +82,15 @@ pub(crate) async fn send_command_response(command: &mut ApplicationCommandIntera
         response.kind(ChannelMessageWithSource)
             .interaction_response_data(|message| 
                 message.content(content).flags(flags)
+            )
+    }).await.unwrap();
+}
+
+pub(crate) async fn send_file_command_response(command: &mut ApplicationCommandInteraction, ctx: &Context, content: &str, file: (Vec<u8>, &str), flags: MessageFlags) {
+    command.create_interaction_response(&ctx.http, |response| {
+        response.kind(ChannelMessageWithSource)
+            .interaction_response_data(|message| 
+                message.content(content).add_file((file.0.as_slice(), file.1)).flags(flags)
             )
     }).await.unwrap();
 }

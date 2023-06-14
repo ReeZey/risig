@@ -67,7 +67,7 @@ impl EventHandler for Handler {
                 "daily" => daily::run(&mut command, &ctx, user, user_data).await,
                 "top"  => top::run(&mut command, &ctx).await,
                 "balance" => balance::run(&mut command, &ctx, user_data).await,
-                "requestmydata" => requestmydata::run(&mut command, &ctx, user_data).await,
+                "requestmydata" => requestmydata::run(&mut command, &ctx, user, user_data).await,
                 "deposit" => deposit::run(&mut command, &ctx, user, user_data).await,
                 "withdraw" => withdraw::run(&mut command, &ctx, user, user_data).await,
                 "donate" => donate::run(&mut command, &ctx, user, user_data).await,
