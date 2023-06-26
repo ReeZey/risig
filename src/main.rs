@@ -17,6 +17,7 @@ use utils::{get_userdata_doc, save_userdata_doc, send_command_response};
 use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob};
 
 mod utils;
+mod translator;
 
 struct Handler;
 

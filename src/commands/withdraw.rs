@@ -1,5 +1,5 @@
 use bson::Document;
-use crate::utils::{save_userdata_doc, send_command_response};
+use crate::{utils::{save_userdata_doc, send_command_response}, translator::translate};
 use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}, prelude::Context};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
@@ -10,7 +10,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     let amount = command.data.options.get(0).unwrap().value.as_ref().unwrap().as_i64().unwrap();
 
     if amount < 1 {
-        send_command_response(command, &ctx, "invalid amount", MessageFlags::EPHEMERAL).await;
+        send_command_response(command, &ctx, translate("invalid-amount"), MessageFlags::EPHEMERAL).await;
         return
     }
 

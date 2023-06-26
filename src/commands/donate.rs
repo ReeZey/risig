@@ -1,6 +1,6 @@
 use bson::Document;
 use serenity::{builder::CreateApplicationCommand, model::{prelude::interaction::{application_command::{ApplicationCommandInteraction, CommandDataOptionValue}, MessageFlags}, user::User}, prelude::Context};
-use crate::utils::{save_userdata_doc, get_userdata_doc, send_command_response};
+use crate::{utils::{save_userdata_doc, get_userdata_doc, send_command_response}, translator::translate};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("donate").description("donate moni")
@@ -22,8 +22,9 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     let mut target_data = target_data.unwrap();
 
     let amount = command.data.options.get(1).unwrap().value.as_ref().unwrap().as_i64().unwrap();
+    
     if amount < 1 {
-        send_command_response(command, &ctx, "invalid amount", MessageFlags::EPHEMERAL).await;
+        send_command_response(command, &ctx, translate("invalid-amount"), MessageFlags::EPHEMERAL).await;
         return
     }
 
@@ -38,7 +39,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     };
 
     if amount > money {
-        send_command_response(command, &ctx, &format!("you are missing `{} ris`", amount - money), MessageFlags::EPHEMERAL).await;
+        send_command_response(command, &ctx, &format!("{} `{} ris`", translate("too-poor"), amount - money), MessageFlags::EPHEMERAL).await;
         return
     }
 
