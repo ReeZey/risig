@@ -1,6 +1,7 @@
 static TRANSLATES: &[(&str, &str)] = &[
     ("invalid-amount", "invalid amount"),
-    ("too-poor", "you dont have enough")
+    ("too-poor", "you dont have enough"),
+    ("user-not-found", "user not found, the user must have used <@568163802907148307> atleast once")
 ];
 
 pub(crate) fn translate(str: &str) -> &str {

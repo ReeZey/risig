@@ -25,19 +25,18 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         }
     }
     
-    let money: i64 = if let Some(money) = user_data.get("money") {
-        money.as_i64().unwrap()
-    } else {
-        0
+    let money: i64 = match user_data.get("money") {
+        Some(money) => money.as_i64().unwrap(),
+        None => 0
     };
 
-    let work_money = rand::thread_rng().gen_range(200..1000);
-    let five_minutes = Duration::from_secs(300).as_millis() as i64;
+    let work_money = rand::thread_rng().gen_range(500..2500);
+    let time_offset = Duration::from_secs(rand::thread_rng().gen_range(60..300));
 
     user_data.insert("money", money + work_money);
-    user_data.insert("last_work", now + five_minutes);
+    user_data.insert("last_work", now + time_offset.as_millis() as i64);
     
     save_userdata_doc(user.id, &user_data).await;
 
-    send_command_response(command, &ctx, &format!("you earned `{} ris` for working, now you have `{} ris`", work_money, money + work_money), MessageFlags::default()).await;
+    send_command_response(command, &ctx, &format!("you earned `{} ris` for working, you may work again in {}", work_money, &format_duration(time_offset)), MessageFlags::default()).await;
 }

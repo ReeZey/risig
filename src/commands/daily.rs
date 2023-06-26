@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use bson::Document;
+use rand::Rng;
 use serenity::{model::{user::User, prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}, prelude::Context};
 use crate::utils::{save_userdata_doc, format_duration, send_command_response};
 use serenity::builder::CreateApplicationCommand;
@@ -31,7 +32,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     };
 
     let tomorrow = Duration::from_secs(86400);
-    let amount = 10_000;
+    let amount = rand::thread_rng().gen_range(1_000..10_000);
 
     user_data.insert("money", money + amount);
     user_data.insert("last_daily", now + tomorrow.as_millis() as i64);

@@ -36,6 +36,8 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         user_data.insert("money", money - amount);
         save_userdata_doc(user.id, &user_data).await;
 
+        time::sleep(Duration::new(3, 0)).await;
+        
         send_message(&ctx, &command.channel_id, &format!("<@{}> lost `{} ris` <:disbelief:1037738451493203998> you now have `{} ris`", user.id, amount, money - amount)).await;
         return
     }

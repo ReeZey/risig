@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::utils::{get_userdata_doc, save_userdata_doc, send_command_response};
+use crate::{utils::{get_userdata_doc, save_userdata_doc, send_command_response}, translator::translate};
 use bson::Document;
 use rand::Rng;
 use serenity::{builder::CreateApplicationCommand, model::{prelude::{interaction::{application_command::{CommandDataOptionValue, ApplicationCommandInteraction}, MessageFlags}}, user::User}, prelude::Context};
@@ -19,7 +19,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
 
     let target_data = get_userdata_doc(target.id).await;
     if target_data.is_none() {
-        send_command_response(command, &ctx, "user not found, the user must have used <@568163802907148307> atleast once", MessageFlags::EPHEMERAL).await;
+        send_command_response(command, &ctx, translate("user-not-found"), MessageFlags::EPHEMERAL).await;
         return
     }
     let mut target_data = target_data.unwrap();
