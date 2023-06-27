@@ -31,14 +31,14 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
 
     let mut total_money = 0;
     for fish in fish_array {
-        total_money += fish.length as i64 * fish.weight as i64 * 2000;
+        total_money += fish.length as i64 * fish.weight as i64 * 1000;
     }
 
     let money = match user_data.get("money") {
         Some(money) => money.as_i64().unwrap(),
         None => 0,
     };
-    
+
     user_data.insert("money", money + total_money);
     user_data.remove("fishes");
     save_userdata_doc(user.id, &user_data).await;

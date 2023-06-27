@@ -7,6 +7,7 @@ use serenity::model::prelude::interaction::MessageFlags;
 use serenity::model::prelude::interaction::application_command::ApplicationCommandInteraction;
 use serenity::model::user::User;
 use serenity::prelude::Context;
+use strum::IntoEnumIterator;
 
 use crate::structs::fish::{Fish, FishType};
 use crate::utils::{send_command_response, format_duration, save_userdata_doc};
@@ -54,10 +55,14 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         return;
     }
 
+    let options = FishType::iter().collect::<Vec<_>>();
+    let choice = rand::thread_rng().gen_range(0..options.len());
+    let fish_type: FishType = options.get(choice).unwrap().clone();
+
     let le_fish = Fish {
         weight: rand::thread_rng().gen_range(1..10),
         length: rand::thread_rng().gen_range(1..25),
-        fish_type: FishType::Herring,
+        fish_type,
     };
 
     send_command_response(command, &ctx, &format!("you lost `{} ris` BUT you got an {} worth {}! now you can chill for 30 minutes", cost, le_fish.fish_type.to_string(), le_fish.length as i64 * le_fish.weight as i64 * 2000), MessageFlags::default()).await;
