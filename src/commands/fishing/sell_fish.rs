@@ -38,8 +38,9 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         Some(money) => money.as_i64().unwrap(),
         None => 0,
     };
-
+    
     user_data.insert("money", money + total_money);
+    user_data.remove("fishes");
     save_userdata_doc(user.id, &user_data).await;
     
     send_command_response(command, ctx, &format!("you selled all you fish for `{} ris`", total_money), MessageFlags::default()).await;
