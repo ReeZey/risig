@@ -70,7 +70,7 @@ pub(crate) fn format_duration(duration: Duration) -> String {
         return format!("{}h {}m {}s", hours, minutes, seconds);
     } else if minutes > 0 {
         return format!("{}m {}s", minutes, seconds);
-    } else if seconds == 0 {
+    } else if seconds > 0 {
         return format!("{}s", seconds);
     } else {
         return format!("{}ms", duration.as_millis())

@@ -14,10 +14,11 @@ use commands::{work, ping, top, balance, daily};
 use tokio::fs;
 use utils::{get_userdata_doc, save_userdata_doc, send_command_response};
 
-use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob};
+use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob, fishing};
 
 mod utils;
 mod translator;
+mod structs;
 
 struct Handler;
 
@@ -68,6 +69,9 @@ impl EventHandler for Handler {
                 "daily" => daily::run(&mut command, &ctx, user, user_data).await,
                 "top"  => top::run(&mut command, &ctx).await,
                 "balance" => balance::run(&mut command, &ctx, user_data).await,
+                "fish" => fishing::fish::run(&mut command, &ctx, user, user_data).await,
+                "showfish" => fishing::show_fish::run(&mut command, &ctx, user_data).await,
+                "sellfish" => fishing::sell_fish::run(&mut command, &ctx, user, user_data).await,
                 "requestmydata" => requestmydata::run(&mut command, &ctx, user, user_data).await,
                 "deposit" => deposit::run(&mut command, &ctx, user, user_data).await,
                 "withdraw" => withdraw::run(&mut command, &ctx, user, user_data).await,
@@ -99,6 +103,9 @@ impl EventHandler for Handler {
                     .create_application_command(|command| work::register(command))
                     .create_application_command(|command| daily::register(command))
                     .create_application_command(|command| balance::register(command))
+                    .create_application_command(|command| fishing::fish::register(command))
+                    .create_application_command(|command| fishing::show_fish::register(command))
+                    .create_application_command(|command| fishing::sell_fish::register(command))
                     .create_application_command(|command| deposit::register(command)
                         .create_option(|option| {
                             option.name("amount").description("amount of deposit").kind(CommandOptionType::Integer).required(true)

@@ -712,6 +712,7 @@ dependencies = [
  "bson",
  "dotenvy",
  "rand",
+ "serde",
  "serde_json",
  "serenity",
  "tokio",
