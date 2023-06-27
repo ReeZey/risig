@@ -32,7 +32,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     };
 
     let tomorrow = Duration::from_secs(86400);
-    let amount = rand::thread_rng().gen_range(1_000..10_000);
+    let amount = rand::thread_rng().gen_range(5_000..20_000);
 
     user_data.insert("money", money + amount);
     user_data.insert("last_daily", now + tomorrow.as_millis() as i64);
