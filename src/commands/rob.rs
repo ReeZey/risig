@@ -17,6 +17,11 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         return
     };
 
+    if target.id == user.id {
+        send_command_response(command, &ctx, "you cannot rob yourself", MessageFlags::default()).await;
+        return;
+    }
+
     let target_data = get_userdata_doc(target.id).await;
     if target_data.is_none() {
         send_command_response(command, &ctx, translate("user-not-found"), MessageFlags::EPHEMERAL).await;
@@ -41,7 +46,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     let least_money = min(money, target_money);
     let amount = rand::thread_rng().gen_range(0..=least_money);
     
-    let successful = rand::thread_rng().gen_range(0..=4) == 4;
+    let successful = rand::thread_rng().gen_range(0..2) == 0;
 
     if !successful {
         target_data.insert("money", &target_money + amount);
@@ -53,8 +58,8 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         return
     }
 
-    target_data.insert("money", &target_money - amount);
     user_data.insert("money", &money + amount);
+    target_data.insert("money", &target_money - amount);
     save_userdata_doc(target.id, &target_data).await;
     save_userdata_doc(user.id, &user_data).await;
 

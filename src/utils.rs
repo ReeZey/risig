@@ -1,4 +1,4 @@
-use std::{path::Path, time::Duration};
+use std::{path::Path, time::{Duration, SystemTime, UNIX_EPOCH}, ops::Add};
 use bson::Document;
 use tokio::{fs::File, io::AsyncWriteExt};
 use serenity::{client::Context, model::prelude::{UserId, interaction::{application_command::ApplicationCommandInteraction, MessageFlags}, ChannelId}};
@@ -91,6 +91,13 @@ pub(crate) fn format_duration(duration: Duration) -> String {
     }
 
     return time_builder.join(" ");
+}
+
+pub(crate) fn discord_duration(duration: Duration) -> String {
+    let start = SystemTime::now();
+    let relative_time = start.duration_since(UNIX_EPOCH).unwrap().add(duration).as_secs();
+
+    return format!("<t:{}:R>", relative_time);
 }
 
 pub(crate) async fn send_command_response(command: &mut ApplicationCommandInteraction, ctx: &Context, content: &str, flags: MessageFlags) {

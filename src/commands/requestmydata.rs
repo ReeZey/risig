@@ -13,6 +13,6 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     let pretty_json_data: String = serde_json::to_string_pretty(&json_data).unwrap();
     
     //send_command_response(command, &ctx, &format!("```json\n{}```", pretty_json_data), MessageFlags::EPHEMERAL).await;
-    send_file_command_response(command, &ctx, "", (pretty_json_data.as_bytes().to_vec(), &format!("{}.json", user.name)), MessageFlags::EPHEMERAL).await;
+    send_file_command_response(command, &ctx, &pretty_json_data[..2000], (pretty_json_data.as_bytes().to_vec(), &format!("{}.json", user.name)), MessageFlags::EPHEMERAL).await;
     //send_file(&ctx, &msg, Some(), pretty_json_data.as_bytes().to_vec(), &format!("{}.json", msg.author.id)).await;
 }

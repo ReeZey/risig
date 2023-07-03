@@ -11,8 +11,13 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
 }
 
 pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user_data: Document) {
+    let fishing: Document = match user_data.get("fishing") {
+        Some(doc) => doc.as_document().unwrap().to_owned(),
+        None => Document::default()
+    };
+    
     let mut fish_array = vec![];
-    match user_data.get("fishes") {
+    match fishing.get("fishes") {
         Some(fish) => {
             for bson in fish.as_array().unwrap().to_vec() {
                 fish_array.push(bson::from_bson::<Fish>(bson).unwrap());

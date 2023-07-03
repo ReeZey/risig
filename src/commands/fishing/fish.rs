@@ -11,17 +11,18 @@ use strum::IntoEnumIterator;
 use rand_distr::{Exp, Distribution};
 
 use crate::structs::fish::{Fish, FishType};
-use crate::utils::{send_command_response, format_duration, save_userdata_doc};
+use crate::utils::{send_command_response, format_duration, save_userdata_doc, get_number, discord_duration};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("fish").description("fish fishes")
 }
 
 pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
-    let money = match user_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        None => 0
-    };
+    //temporary
+    user_data.remove("last_fish");
+    user_data.remove("fishes");
+
+    let money = get_number(&user_data, "money");
 
     let cost = 500;
 
@@ -32,27 +33,42 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
     
     let time = SystemTime::now();
     let now = time.duration_since(UNIX_EPOCH).unwrap().as_millis() as i64;
-    
-    let last_fish = user_data.get("last_fish");
+
+    let mut fishing: Document = match user_data.get("fishing") {
+        Some(doc) => doc.as_document().unwrap().to_owned(),
+        None => Document::default()
+    };
+
+    let last_fish = fishing.get("cooldown");
     if last_fish.is_some() {
         let last = last_fish.unwrap().as_i64().unwrap();
 
         if now < last {
             let next_time = Duration::from_millis((last - now) as u64);
-            send_command_response(command, &ctx, &format!("you are tired, you need to wait {}", format_duration(next_time)), MessageFlags::EPHEMERAL).await;
+            send_command_response(command, &ctx, &format!("you are tired, you need to wait {}", discord_duration(next_time)), MessageFlags::EPHEMERAL).await;
             return
         }
     }
 
     user_data.insert("money", money - cost);
 
+    let mut last_fish = get_number(&fishing, "last_fish");
+    
     let success = rand::thread_rng().gen_range(0..20);
     if success != 0 {
         let time_offset = Duration::from_secs(rand::thread_rng().gen_range(30..90));
-        user_data.insert("last_fish", now + time_offset.as_millis() as i64);
+        fishing.insert("cooldown", now + time_offset.as_millis() as i64);
+        last_fish += 1;
+        fishing.insert("last_fish", last_fish);
+        user_data.insert("fishing", fishing);
         save_userdata_doc(user.id, &user_data).await;
 
-        send_command_response(command, &ctx, &format!("you lost `{} ris` and missed the fish! hook landed {} meter off! you may fish again in {}", cost, success, format_duration(time_offset)), MessageFlags::default()).await;
+        if rand::thread_rng().gen_range(0..20) == 0 {
+            send_command_response(command, &ctx, &format!("YOU GOT FISH, Air worth `0 ris`! now you can chill, try again {}", discord_duration(time_offset)), MessageFlags::default()).await;
+            return;
+        }
+
+        send_command_response(command, &ctx, &format!("you lost `{} ris` this is the {}x you missed the fish! hook landed {} meter off! you may fish again {}", cost, last_fish, success, discord_duration(time_offset)), MessageFlags::default()).await;
         return;
     }
 
@@ -76,7 +92,7 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
     send_command_response(command, &ctx, &format!("YOU GOT FISH, an {} worth `{} ris`! now you can chill for {}", le_fish.fish_type.to_string(), le_fish.length as i64 * le_fish.weight as i64 * 1000, format_duration(wait_time)), MessageFlags::default()).await;
 
     let mut fish_array = vec![];
-    match user_data.get("fishes") {
+    match fishing.get("fishes") {
         Some(fish) => {
             for bson in fish.as_array().unwrap().to_vec() {
                 fish_array.push(bson::from_bson::<Fish>(bson).unwrap());
@@ -85,9 +101,11 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         None => {}
     };
 
-    user_data.insert("last_fish", now + wait_time.as_millis() as i64);
+    fishing.remove("last_fish");
+    fishing.insert("cooldown", now + wait_time.as_millis() as i64);
     fish_array.push(le_fish);
-    user_data.insert("fishes", bson::to_bson(&fish_array).unwrap());
+    fishing.insert("fishes", bson::to_bson(&fish_array).unwrap());
+    user_data.insert("fishing", fishing);
     save_userdata_doc(user.id, &user_data).await;
 }
 

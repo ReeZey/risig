@@ -14,8 +14,13 @@ pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicatio
 }
 
 pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
+    let mut fishing: Document = match user_data.get("fishing") {
+        Some(doc) => doc.as_document().unwrap().to_owned(),
+        None => Document::default()
+    };
+    
     let mut fish_array = vec![];
-    match user_data.get("fishes") {
+    match fishing.get("fishes") {
         Some(fish) => {
             for bson in fish.as_array().unwrap().to_vec() {
                 fish_array.push(bson::from_bson::<Fish>(bson).unwrap());
@@ -37,7 +42,8 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
     let money = get_number(&user_data, "money");
 
     user_data.insert("money", money + total_money);
-    user_data.remove("fishes");
+    fishing.remove("fishes");
+    user_data.insert("fishing", fishing);
     save_userdata_doc(user.id, &user_data).await;
     
     send_command_response(command, ctx, &format!("you selled all you fish for `{} ris`", total_money), MessageFlags::default()).await;
