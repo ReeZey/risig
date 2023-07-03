@@ -8,6 +8,7 @@ use serenity::model::prelude::interaction::application_command::ApplicationComma
 use serenity::model::user::User;
 use serenity::prelude::Context;
 use strum::IntoEnumIterator;
+use rand_distr::{Exp, Distribution};
 
 use crate::structs::fish::{Fish, FishType};
 use crate::utils::{send_command_response, format_duration, save_userdata_doc};
@@ -55,17 +56,24 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         return;
     }
 
+    let exp = Exp::new(1.0/5.0).unwrap();
+    let weight = 1 + exp.sample(&mut rand::thread_rng()) as u8;
+
+    let exp = Exp::new(1.0/8.0).unwrap();
+    let length = 1 + exp.sample(&mut rand::thread_rng()) as u8;
+
     let options = FishType::iter().collect::<Vec<_>>();
     let choice = rand::thread_rng().gen_range(0..options.len());
     let fish_type: FishType = options.get(choice).unwrap().clone();
 
     let le_fish = Fish {
-        weight: rand::thread_rng().gen_range(1..10),
-        length: rand::thread_rng().gen_range(1..25),
+        weight,
+        length,
         fish_type,
     };
 
-    send_command_response(command, &ctx, &format!("you lost `{} ris` BUT you got an {} worth {}! now you can chill for 30 minutes", cost, le_fish.fish_type.to_string(), le_fish.length as i64 * le_fish.weight as i64 * 2000), MessageFlags::default()).await;
+    let wait_time = Duration::from_secs((le_fish.length as u64 + le_fish.weight as u64) * 3 * 60);
+    send_command_response(command, &ctx, &format!("YOU GOT FISH, an {} worth `{} ris`! now you can chill for {}", le_fish.fish_type.to_string(), le_fish.length as i64 * le_fish.weight as i64 * 1000, format_duration(wait_time)), MessageFlags::default()).await;
 
     let mut fish_array = vec![];
     match user_data.get("fishes") {
@@ -77,10 +85,8 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         None => {}
     };
 
+    user_data.insert("last_fish", now + wait_time.as_millis() as i64);
     fish_array.push(le_fish);
-
-    let thirty_minutes = Duration::from_secs(1800);
-    user_data.insert("last_fish", now + thirty_minutes.as_millis() as i64);
     user_data.insert("fishes", bson::to_bson(&fish_array).unwrap());
     save_userdata_doc(user.id, &user_data).await;
 }
