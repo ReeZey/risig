@@ -4,7 +4,7 @@ use bson::Document;
 use serenity::{builder::CreateApplicationCommand, model::prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}, prelude::Context};
 use tokio::fs;
 
-use crate::utils::send_command_response;
+use crate::utils::{send_command_response, get_number};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("top").description("top money money")
@@ -18,16 +18,9 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         let file_path = file.unwrap().path();
         let data = fs::read(&file_path).await;
         let user_data: Document = bson::from_slice(&data.unwrap()).unwrap_or_default();
-
-        let money = match user_data.get("money") {
-            Some(money) => money.as_i64().unwrap(),
-            None => 0
-        };
-
-        let bank_money = match user_data.get("bank_money") {
-            Some(money) => money.as_i64().unwrap(),
-            None => 0
-        };
+        
+        let money = get_number(&user_data, "money");
+        let bank_money = get_number(&user_data, "bank_money");
 
         let username = user_data.get("username").unwrap().as_str().unwrap().to_string();
         all_money.push((username, money, bank_money));
@@ -37,7 +30,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     all_money.reverse();
 
     let mut top_string: String = String::default();
-    for user in all_money[0..min(all_money.len(), 5)].iter() {
+    for user in all_money[0..min(all_money.len(), 10)].iter() {
         top_string += &format!("{}: `{} total ris` [cash {} / bank {}]\n", user.0, user.1 + user.2, user.1, user.2);
     }
 

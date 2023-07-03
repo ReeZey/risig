@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use bson::Document;
 use serenity::{model::{user::User, prelude::interaction::{MessageFlags, application_command::ApplicationCommandInteraction}}, prelude::Context};
 use rand::Rng;
-use crate::utils::{save_userdata_doc, format_duration, send_command_response};
+use crate::utils::{save_userdata_doc, format_duration, send_command_response, get_number};
 use serenity::builder::CreateApplicationCommand;
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
@@ -25,10 +25,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         }
     }
     
-    let money: i64 = match user_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        None => 0
-    };
+    let money = get_number(&user_data, "money");
 
     let work_money = rand::thread_rng().gen_range(500..2500);
     let time_offset = Duration::from_secs(rand::thread_rng().gen_range(60..300));

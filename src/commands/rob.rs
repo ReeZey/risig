@@ -1,6 +1,6 @@
 use std::cmp::min;
 
-use crate::{utils::{get_userdata_doc, save_userdata_doc, send_command_response}, translator::translate};
+use crate::{utils::{get_userdata_doc, save_userdata_doc, send_command_response, get_number}, translator::translate};
 use bson::Document;
 use rand::Rng;
 use serenity::{builder::CreateApplicationCommand, model::{prelude::{interaction::{application_command::{CommandDataOptionValue, ApplicationCommandInteraction}, MessageFlags}}, user::User}, prelude::Context};
@@ -24,34 +24,28 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     }
     let mut target_data = target_data.unwrap();
 
-    let user_money: i64 = match user_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        _ => 0
-    };
+    let money = get_number(&user_data, "money");
 
-    if user_money < 2000 {
+    if money < 2000 {
         send_command_response(command, &ctx, "you need to have atleast `2000 ris` to rob someone", MessageFlags::EPHEMERAL).await;
         return
     }
 
-    let target_money: i64 = match target_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        _ => 0
-    };
+    let target_money = get_number(&target_data, "money");
 
     if target_money < 2000 {
         send_command_response(command, &ctx, "target does not have enought money, atleast `2000 ris` in cash", MessageFlags::EPHEMERAL).await;
         return
     }
 
-    let least_money = min(user_money, target_money);
+    let least_money = min(money, target_money);
     let amount = rand::thread_rng().gen_range(0..=least_money);
     
     let successful = rand::thread_rng().gen_range(0..=4) == 4;
 
     if !successful {
         target_data.insert("money", &target_money + amount);
-        user_data.insert("money", &user_money - amount);
+        user_data.insert("money", &money - amount);
         save_userdata_doc(target.id, &target_data).await;
         save_userdata_doc(user.id, &user_data).await;
 
@@ -60,7 +54,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     }
 
     target_data.insert("money", &target_money - amount);
-    user_data.insert("money", &user_money + amount);
+    user_data.insert("money", &money + amount);
     save_userdata_doc(target.id, &target_data).await;
     save_userdata_doc(user.id, &user_data).await;
 

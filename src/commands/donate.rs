@@ -1,6 +1,6 @@
 use bson::Document;
 use serenity::{builder::CreateApplicationCommand, model::{prelude::interaction::{application_command::{ApplicationCommandInteraction, CommandDataOptionValue}, MessageFlags}, user::User}, prelude::Context};
-use crate::{utils::{save_userdata_doc, get_userdata_doc, send_command_response}, translator::translate};
+use crate::{utils::{save_userdata_doc, get_userdata_doc, send_command_response, get_number}, translator::translate};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("donate").description("donate moni")
@@ -28,15 +28,8 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         return
     }
 
-    let money: i64 = match user_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        _ => 0
-    };
-
-    let target_money: i64 = match target_data.get("money") {
-        Some(target_money) => target_money.as_i64().unwrap(),
-        _ => 0
-    };
+    let money = get_number(&user_data, "money");
+    let target_money = get_number(&target_data, "money");
 
     if amount > money {
         send_command_response(command, &ctx, &format!("{} `{} ris`", translate("too-poor"), amount - money), MessageFlags::EPHEMERAL).await;

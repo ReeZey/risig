@@ -60,21 +60,37 @@ pub(crate) async fn save_userdata_doc(user: UserId, bson_doc: &Document){
     save_userdata(user, out_buffer).await;
 }
 
+pub(crate) fn get_number(bson_doc: &Document, key: &str) -> i64 {
+    match bson_doc.get(key) {
+        Some(key) => key.as_i64().unwrap(),
+        None => 0
+    }
+}
+
 pub(crate) fn format_duration(duration: Duration) -> String {
     let total_seconds = duration.as_secs();
     let hours = total_seconds / 3600;
     let minutes = (total_seconds % 3600) / 60;
     let seconds = total_seconds % 60;
-    
+
+    let mut time_builder: Vec<String> = vec![];
     if hours > 0 {
-        return format!("{}h {}m {}s", hours, minutes, seconds);
-    } else if minutes > 0 {
-        return format!("{}m {}s", minutes, seconds);
-    } else if seconds > 0 {
-        return format!("{}s", seconds);
-    } else {
-        return format!("{}ms", duration.as_millis())
+        time_builder.push(format!("{}h", hours));
     }
+
+    if minutes > 0 {
+        time_builder.push(format!("{}m", minutes));
+    }
+
+    if seconds > 0 {
+        time_builder.push(format!("{}s", seconds));
+    }
+
+    if time_builder.len() == 0 {
+        return format!("{}ms", duration.as_millis());
+    }
+
+    return time_builder.join(" ");
 }
 
 pub(crate) async fn send_command_response(command: &mut ApplicationCommandInteraction, ctx: &Context, content: &str, flags: MessageFlags) {

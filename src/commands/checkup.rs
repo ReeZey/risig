@@ -1,4 +1,4 @@
-use crate::utils::{get_userdata_doc, send_command_response};
+use crate::utils::{get_userdata_doc, send_command_response, get_number};
 use serenity::{builder::CreateApplicationCommand, model::prelude::{interaction::{application_command::{ApplicationCommandInteraction, CommandDataOptionValue}, MessageFlags}}, prelude::Context};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
@@ -20,14 +20,8 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     }
     let target_data = target_data.unwrap();
 
-    let target_money: i64 = match target_data.get("money") {
-        Some(target_money) => target_money.as_i64().unwrap(),
-        _ => 0
-    };
-
-    let target_bank_money: i64 = match target_data.get("bank_money") {
-        Some(target_bank_money) => target_bank_money.as_i64().unwrap(),
-        _ => 0
-    };
+    let target_money = get_number(&target_data, "money");
+    let target_bank_money = get_number(&target_data, "bank_money");
+    
     send_command_response(command, &ctx, &format!("{} has [cash {} / bank {}]", target.name, target_money, target_bank_money), MessageFlags::default()).await;
 }

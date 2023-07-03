@@ -1,5 +1,5 @@
 use bson::Document;
-use crate::{utils::{save_userdata_doc, send_command_response}, translator::translate};
+use crate::{utils::{save_userdata_doc, send_command_response, get_number}, translator::translate};
 use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}, prelude::Context};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
@@ -14,15 +14,8 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         return
     }
 
-    let money: i64 = match user_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        _ => 0
-    };
-
-    let bank_money: i64 = match user_data.get("bank_money") {
-        Some(bank_money) => bank_money.as_i64().unwrap(),
-        _ => 0
-    };
+    let money = get_number(&user_data, "money");
+    let bank_money = get_number(&user_data, "bank_money");
 
     if amount > bank_money {
         send_command_response(command, &ctx, &format!("you are missing `{} ris`", amount - money), MessageFlags::EPHEMERAL).await;

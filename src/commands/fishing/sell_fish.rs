@@ -7,7 +7,7 @@ use serenity::prelude::Context;
 
 use crate::structs::fish::Fish;
 use crate::send_command_response;
-use crate::utils::save_userdata_doc;
+use crate::utils::{save_userdata_doc, get_number};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("sellfish").description("sell all fishes")
@@ -34,10 +34,7 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         total_money += fish.length as i64 * fish.weight as i64 * 1000;
     }
 
-    let money = match user_data.get("money") {
-        Some(money) => money.as_i64().unwrap(),
-        None => 0,
-    };
+    let money = get_number(&user_data, "money");
 
     user_data.insert("money", money + total_money);
     user_data.remove("fishes");
