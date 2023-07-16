@@ -29,7 +29,7 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
     let mut embed_fields: Vec<(String, String, bool)> = vec![];
 
     for fish in fish_array {
-        embed_fields.push((fish.fish_type.to_string(), format!("{} weight {} length", fish.weight, fish.length), false));
+        embed_fields.push((fish.fish_type.to_string(), format!("{} kg {} cm - price: {}", fish.weight, fish.length, fish.length as i64 * fish.weight as i64 * 1000), false));
     }
     
     command.create_interaction_response(&ctx.http, |response| {
