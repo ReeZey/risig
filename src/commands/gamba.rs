@@ -27,8 +27,6 @@ pub(crate) async fn run(user: User, mut user_data: Document, args: Vec<CommandDa
     if gamba != 4 {
         user_data.insert("money", money - amount);
         save_userdata_doc(user.id, &user_data).await;
-
-        time::sleep(Duration::new(3, 0)).await;
         
         return ReturnMessage::new(&format!("<@{}> lost `{} ris` <:disbelief:1037738451493203998> you now have `{} ris`", user.id, amount, money - amount), MessageFlags::default());
     }
