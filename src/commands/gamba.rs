@@ -1,8 +1,6 @@
-use std::time::Duration;
-
 use bson::Document;
 use rand::Rng;
-use tokio::time;
+
 use crate::{utils::{save_userdata_doc, get_number}, translator::translate, risig::ReturnMessage};
 use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::interaction::{application_command::CommandDataOption, MessageFlags}}};
 

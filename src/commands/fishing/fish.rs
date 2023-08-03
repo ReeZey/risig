@@ -105,7 +105,11 @@ pub async fn run(user: User, mut user_data: Document) -> ReturnMessage {
     user_data.insert("fishing", fishing);
     save_userdata_doc(user.id, &user_data).await;
 
-    return ReturnMessage::new(&format!("YOU GOT FISH, an {} worth `{} ris`! now you can chill for {} ({})", cloned_fish.fish_type.to_string(), cloned_fish.length as i64 * cloned_fish.weight as i64 * 1000, format_duration(wait_time), discord_duration(wait_time)), MessageFlags::default());
+    return ReturnMessage::new_with_button(
+        &format!("YOU GOT FISH, an {} worth `{} ris`! now you can chill for {} ({})", cloned_fish.fish_type.to_string(), cloned_fish.length as i64 * cloned_fish.weight as i64 * 1000, format_duration(wait_time), discord_duration(wait_time)), 
+        MessageFlags::default(),
+        InteractionButton::new("Show fish inventory", "showfish")
+    );
 }
 
 
