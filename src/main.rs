@@ -1,20 +1,21 @@
 use std::env;
 use std::path::Path;
 
-use bson::Document;
 use serenity::async_trait;
 use serenity::model::gateway::Ready;
 use serenity::model::prelude::GuildId;
 use serenity::model::prelude::command::{Command, CommandOptionType};
-use serenity::model::prelude::interaction::{Interaction, MessageFlags};
+use serenity::model::prelude::interaction::{MessageFlags, Interaction};
+use serenity::model::prelude::interaction::InteractionResponseType::ChannelMessageWithSource;
 use serenity::prelude::*;
 
+mod risig;
 mod commands;
 use commands::{work, ping, top, balance, daily};
 use tokio::fs;
-use utils::{get_userdata_doc, save_userdata_doc, send_command_response};
 
 use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob, fishing};
+use crate::risig::InteractionButton;
 
 mod utils;
 mod translator;
@@ -29,60 +30,104 @@ impl EventHandler for Handler {
 
     }
     */
-
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(mut command) = interaction {
-            //println!("Received command interaction: {:#?}", command);
+        if let Interaction::MessageComponent(component) = interaction {
+            //println!("{:#?}", component);
+            //let options = component.data;
 
-            let token = env::var("MESSAGE_CHANNEL").expect("Expected a token in the environment");
-            if command.channel_id.to_string() != token {
-                send_command_response(&mut command, &ctx, &format!("you can only use the bot in <#{}>", token), MessageFlags::EPHEMERAL).await;
-                return
-            }
+            let user = component.user.clone();
+            let action = component.data.custom_id.clone();
 
-            let user = command.member.clone().unwrap().user;
-            let mut user_data = get_userdata_doc(user.id).await;
+            let risig_response = risig::handle_message(user.clone(), action.to_string(), None).await;
 
-            if user_data.is_none() {
-                let mut new_user = Document::default();
-                new_user.insert("username", &user.name);
-                new_user.insert("userid", i64::from(user.id));
-                save_userdata_doc(user.id, &new_user).await;
-
-                user_data = Some(new_user);
-            }
-
-            let mut user_data = user_data.unwrap();
-
-            if user_data.get("username").unwrap().as_str().unwrap() != user.name {
-                user_data.insert("username", &user.name);
-                save_userdata_doc(user.id, &user_data).await;
-            }
-
-            //println!("{:#?}", command);
-
-            println!("{}: {}", user.name, command.data.name.as_str());
-
-            match command.data.name.as_str() {
-                "ping" => ping::run(&mut command, &ctx).await,
-                "work" => work::run(&mut command, &ctx, user, user_data).await,
-                "daily" => daily::run(&mut command, &ctx, user, user_data).await,
-                "top"  => top::run(&mut command, &ctx).await,
-                "balance" => balance::run(&mut command, &ctx, user_data).await,
-                "fish" => fishing::fish::run(&mut command, &ctx, user, user_data).await,
-                "showfish" => fishing::show_fish::run(&mut command, &ctx, user_data).await,
-                "sellfish" => fishing::sell_fish::run(&mut command, &ctx, user, user_data).await,
-                "requestmydata" => requestmydata::run(&mut command, &ctx, user, user_data).await,
-                "deposit" => deposit::run(&mut command, &ctx, user, user_data).await,
-                "withdraw" => withdraw::run(&mut command, &ctx, user, user_data).await,
-                "donate" => donate::run(&mut command, &ctx, user, user_data).await,
-                "checkup" => checkup::run(&mut command, &ctx).await,
-                "rob" => rob::run(&mut command, &ctx, user, user_data).await,
-                "gamba" => gamba::run(&mut command, &ctx, user, user_data).await,
-                _ => {
-                    send_command_response(&mut command, &ctx, "command not found", MessageFlags::default()).await
-                },
+            let content = if risig_response.message_flags == MessageFlags::EPHEMERAL {
+                risig_response.message
+            } else {
+                format!("`{} used {}:`\n{}", user.name, action, risig_response.message)
             };
+
+            component.create_interaction_response(&ctx.http, |response| {
+                response.interaction_response_data(|message| {
+                    message.content(content);
+                    if risig_response.button.is_some() {
+                        let interact_button: InteractionButton = risig_response.button.unwrap();
+
+                        message.components(|comp| {
+                            comp.create_action_row(|ar| {
+                                ar.create_button(|button| {
+                                    button.custom_id(interact_button.command).label(interact_button.label)
+                                })
+                            })
+                        });
+                    }
+                    if risig_response.embed.is_some() {
+                        let embed = risig_response.embed.unwrap();
+
+                        message.embed(|e| {
+                            e.title(embed.title).fields(embed.fields)
+                        });
+                    }
+                    message.flags(risig_response.message_flags);
+
+                    return message;
+                })
+            }).await.unwrap();
+            return;
+        }
+        if let Interaction::ApplicationCommand(command) = interaction {
+            let guild_id = env::var("GUILD_ID").expect("Expected a token in the environment");
+            if command.guild_id.unwrap().to_string() != guild_id {
+                return;
+            }
+
+            let channel_id = env::var("MESSAGE_CHANNEL").expect("Expected a token in the environment");
+            if command.channel_id.to_string() != channel_id {
+                command.create_interaction_response(&ctx.http, |response| {
+                    response.kind(ChannelMessageWithSource)
+                        .interaction_response_data(|message| 
+                            message.content(format!("you can only use the bot in <#{}>", channel_id)).flags(MessageFlags::EPHEMERAL)
+                        )
+                }).await.unwrap();
+                return;
+            }
+
+            let user = command.user.clone();
+            let action = command.data.name.clone();
+
+            let options = if command.data.options.len() > 0 {
+                Some(command.data.options.clone())
+            } else {
+                None
+            };
+
+            let risig_response = risig::handle_message(user, action, options).await;
+            
+            command.create_interaction_response(&ctx.http, |response| {
+                response.interaction_response_data(|message| {
+                    message.content(risig_response.message);
+                    if risig_response.button.is_some() {
+                        let interact_button: InteractionButton = risig_response.button.unwrap();
+
+                        message.components(|comp| {
+                            comp.create_action_row(|ar| {
+                                ar.create_button(|button| {
+                                    button.custom_id(interact_button.command).label(interact_button.label)
+                                })
+                            })
+                        });
+                    }
+                    if risig_response.embed.is_some() {
+                        let embed = risig_response.embed.unwrap();
+
+                        message.embed(|e| {
+                            e.title(embed.title).fields(embed.fields)
+                        });
+                    }
+                    message.flags(risig_response.message_flags);
+
+                    return message;
+                })
+            }).await.unwrap();
         }
     }
 

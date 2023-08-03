@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use strum_macros::EnumIter;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct Fish {
     pub(crate) weight: u8,
     pub(crate) length: u8,

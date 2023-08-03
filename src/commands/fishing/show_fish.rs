@@ -1,16 +1,15 @@
 use bson::Document;
 use serenity::builder::CreateApplicationCommand;
-use serenity::model::prelude::interaction::application_command::ApplicationCommandInteraction;
-use serenity::prelude::Context;
+use serenity::model::prelude::interaction::MessageFlags;
 
+use crate::risig::ReturnMessage;
 use crate::structs::fish::Fish;
-use serenity::model::prelude::interaction::InteractionResponseType::ChannelMessageWithSource;
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("showfish").description("show fishes")
 }
 
-pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user_data: Document) {
+pub async fn run(user_data: Document) -> ReturnMessage {
     let fishing: Document = match user_data.get("fishing") {
         Some(doc) => doc.as_document().unwrap().to_owned(),
         None => Document::default()
@@ -26,21 +25,17 @@ pub async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, use
         None => {}
     };
 
+    if fish_array.len() == 0 {
+        return ReturnMessage::new("you have no fishes bitch", MessageFlags::default());
+    }
+
     let mut embed_fields: Vec<(String, String, bool)> = vec![];
 
     for fish in fish_array {
         embed_fields.push((fish.fish_type.to_string(), format!("{} kg {} cm - price: {}", fish.weight, fish.length, fish.length as i64 * fish.weight as i64 * 1000), false));
     }
-    
-    command.create_interaction_response(&ctx.http, |response| {
-        response.kind(ChannelMessageWithSource)
-            .interaction_response_data(|message| 
-                message.embed(|e| {
-                    e.title(&format!("{}'s fishes", user_data.get("username").unwrap().as_str().unwrap()))
-                        .fields(embed_fields)
-                })
-            )
-    }).await.unwrap();
+
+    return ReturnMessage::embed("", MessageFlags::default(), &format!("{}'s fishes", user_data.get("username").unwrap().as_str().unwrap()), embed_fields)
 }
 
 

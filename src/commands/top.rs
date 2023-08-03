@@ -1,16 +1,16 @@
 use std::{path::Path, cmp::min};
 
 use bson::Document;
-use serenity::{builder::CreateApplicationCommand, model::prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}, prelude::Context};
+use serenity::{builder::CreateApplicationCommand, model::prelude::interaction::MessageFlags};
 use tokio::fs;
 
-use crate::utils::{send_command_response, get_number};
+use crate::{utils::get_number, risig::ReturnMessage};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("top").description("top money money")
 }
 
-pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context) {
+pub(crate) async fn run() -> ReturnMessage {
     let data_path = Path::new("data");
 
     let mut all_money = vec![];
@@ -34,5 +34,5 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         top_string += &format!("{}: `{} total ris` [cash {} / bank {}]\n", user.0, user.1 + user.2, user.1, user.2);
     }
 
-    send_command_response(command, &ctx, &top_string, MessageFlags::default()).await;
+    return ReturnMessage::new(&top_string, MessageFlags::default());
 }

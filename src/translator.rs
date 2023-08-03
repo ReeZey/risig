@@ -1,6 +1,6 @@
 static TRANSLATES: &[(&str, &str)] = &[
-    ("invalid-amount", "invalid amount"),
-    ("too-poor", "you dont have enough"),
+    ("invalid-amount", "invalid ris amount"),
+    ("too-poor", "you dont have enough ris"),
     ("user-not-found", "user not found, the user must have used <@568163802907148307> atleast once")
 ];
 

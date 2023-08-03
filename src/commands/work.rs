@@ -1,16 +1,16 @@
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 use bson::Document;
-use serenity::{model::{user::User, prelude::interaction::{MessageFlags, application_command::ApplicationCommandInteraction}}, prelude::Context};
+use serenity::model::{user::User, prelude::interaction::MessageFlags};
 use rand::Rng;
-use crate::utils::{save_userdata_doc, send_command_response, get_number, discord_duration};
+use crate::{utils::{save_userdata_doc, get_number, discord_duration, format_duration}, risig::{ReturnMessage, InteractionButton}};
 use serenity::builder::CreateApplicationCommand;
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("work").description("work work")
 }
 
-pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
+pub(crate) async fn run(user: User, mut user_data: Document) -> ReturnMessage {
     let time = SystemTime::now();
     let now = time.duration_since(UNIX_EPOCH).unwrap().as_millis() as i64;
 
@@ -20,8 +20,11 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
 
         if now < last {
             let next_time = Duration::from_millis((last - now) as u64);
-            send_command_response(command, &ctx, &format!("you are tired, you need to wait {}", discord_duration(next_time)), MessageFlags::EPHEMERAL).await;
-            return
+            return ReturnMessage::new_with_button(
+                &format!("you are tired, you need to wait {}, ({})", format_duration(next_time), discord_duration(next_time)), 
+                MessageFlags::EPHEMERAL,
+                InteractionButton::new("mimimi work mimimi work mimimi work", "work")
+            );
         }
     }
     
@@ -35,5 +38,9 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     
     save_userdata_doc(user.id, &user_data).await;
 
-    send_command_response(command, &ctx, &format!("you earned `{} ris` for working, you may work again in {}", work_money, discord_duration(time_offset)), MessageFlags::default()).await;
+    return ReturnMessage::new_with_button(
+        &format!("you earned `{} ris` for working, you may work again in {} ({})", work_money, format_duration(time_offset), discord_duration(time_offset)), 
+        MessageFlags::default(),
+        InteractionButton::new("WORK WORK WORK", "work")
+    );
 }

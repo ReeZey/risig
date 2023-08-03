@@ -1,46 +1,41 @@
 use std::cmp::min;
 
-use crate::{utils::{get_userdata_doc, save_userdata_doc, send_command_response, get_number}, translator::translate};
+use crate::{utils::{get_userdata_doc, save_userdata_doc, get_number}, translator::translate, risig::ReturnMessage};
 use bson::Document;
 use rand::Rng;
-use serenity::{builder::CreateApplicationCommand, model::{prelude::{interaction::{application_command::{CommandDataOptionValue, ApplicationCommandInteraction}, MessageFlags}}, user::User}, prelude::Context};
+use serenity::{builder::CreateApplicationCommand, model::{prelude::interaction::{application_command::{CommandDataOptionValue, CommandDataOption}, MessageFlags}, user::User}};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("rob").description("rob ris from user")
 }
 
-pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
-    let target = if let CommandDataOptionValue::User(target, _member) = command.data.options.get(0).unwrap().resolved.as_ref().unwrap() {
+pub(crate) async fn run(user: User, mut user_data: Document, args: Vec<CommandDataOption>) -> ReturnMessage {
+    let target = if let CommandDataOptionValue::User(target, _member) = args.get(0).unwrap().resolved.as_ref().unwrap() {
         target
     } else {
-        send_command_response(command, &ctx, "how did you do this?", MessageFlags::default()).await;
-        return
+        return ReturnMessage::new("how did you do this?", MessageFlags::default());
     };
 
     if target.id == user.id {
-        send_command_response(command, &ctx, "you cannot rob yourself", MessageFlags::default()).await;
-        return;
+        return ReturnMessage::new("you cannot rob yourself", MessageFlags::default());
     }
 
     let target_data = get_userdata_doc(target.id).await;
     if target_data.is_none() {
-        send_command_response(command, &ctx, translate("user-not-found"), MessageFlags::EPHEMERAL).await;
-        return
+        return ReturnMessage::new(translate("user-not-found"), MessageFlags::EPHEMERAL);
     }
     let mut target_data = target_data.unwrap();
 
     let money = get_number(&user_data, "money");
 
     if money < 2000 {
-        send_command_response(command, &ctx, "you need to have atleast `2000 ris` to rob someone", MessageFlags::EPHEMERAL).await;
-        return
+        return ReturnMessage::new("you need to have atleast `2000 ris` to rob someone", MessageFlags::EPHEMERAL);
     }
 
     let target_money = get_number(&target_data, "money");
 
     if target_money < 2000 {
-        send_command_response(command, &ctx, "target does not have enought money, atleast `2000 ris` in cash", MessageFlags::EPHEMERAL).await;
-        return
+        return ReturnMessage::new("target does not have enought money, atleast `2000 ris` in cash", MessageFlags::EPHEMERAL);
     }
 
     let least_money = min(money, target_money);
@@ -54,8 +49,7 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
         save_userdata_doc(target.id, &target_data).await;
         save_userdata_doc(user.id, &user_data).await;
 
-        send_command_response(command, &ctx, &format!("YOU FAILED TO STEAL, YOU PAYED `{} ris` TO <@{}>", amount, target.id), MessageFlags::default()).await;
-        return
+        return ReturnMessage::new(&format!("YOU FAILED TO STEAL, YOU PAYED `{} ris` TO <@{}>", amount, target.id), MessageFlags::default());
     }
 
     user_data.insert("money", &money + amount);
@@ -63,5 +57,5 @@ pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Conte
     save_userdata_doc(target.id, &target_data).await;
     save_userdata_doc(user.id, &user_data).await;
 
-    send_command_response(command, &ctx, &format!("YOU STOLE `{} ris` FROM <@{}>", amount, target.id), MessageFlags::default()).await;
+    return ReturnMessage::new(&format!("YOU STOLE `{} ris` FROM <@{}>", amount, target.id), MessageFlags::default());
 }

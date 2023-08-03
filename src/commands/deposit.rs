@@ -1,30 +1,28 @@
 use bson::Document;
-use crate::{utils::{save_userdata_doc, send_command_response, get_number}, translator::translate};
-use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::interaction::{application_command::ApplicationCommandInteraction, MessageFlags}}, prelude::Context};
+use crate::{utils::{save_userdata_doc, get_number}, translator::translate, risig::ReturnMessage};
+use serenity::{builder::CreateApplicationCommand, model::{user::User, prelude::interaction::{application_command::CommandDataOption, MessageFlags}}};
 
 pub fn register(command: &mut CreateApplicationCommand) -> &mut CreateApplicationCommand {
     command.name("deposit").description("deposit moni")
 }
 
-pub(crate) async fn run(command: &mut ApplicationCommandInteraction, ctx: &Context, user: User, mut user_data: Document) {
-    let amount = command.data.options.get(0).unwrap().value.as_ref().unwrap().as_i64().unwrap();
+pub(crate) async fn run(user: User, mut user_data: Document, args: Vec<CommandDataOption>) -> ReturnMessage {
+    let amount = args.get(0).unwrap().value.as_ref().unwrap().as_i64().unwrap();
 
     if amount < 1 {
-        send_command_response(command, &ctx, translate("invalid-amount"), MessageFlags::EPHEMERAL).await;
-        return
+        return ReturnMessage::new(translate("invalid-amount"), MessageFlags::EPHEMERAL);
     }
 
     let money = get_number(&user_data, "money");
     let bank_money = get_number(&user_data, "bank_money");
 
     if amount > money {
-        send_command_response(command, &ctx, &format!("you are missing `{} ris`", amount - money), MessageFlags::EPHEMERAL).await;
-        return
+        return ReturnMessage::new(&format!("you are missing `{} ris`", amount - money), MessageFlags::EPHEMERAL);
     }
 
     user_data.insert("money", money - amount);
     user_data.insert("bank_money", bank_money + amount);
     save_userdata_doc(user.id, &user_data).await;
 
-    send_command_response(command, &ctx, &format!("you deposited `{} ris`, now you have `{} ris` in the bank", amount, bank_money + amount), MessageFlags::default()).await;
+    return ReturnMessage::new(&format!("you deposited `{} ris`, now you have `{} ris` in the bank", amount, bank_money + amount), MessageFlags::default());
 }
