@@ -14,7 +14,7 @@ mod commands;
 use commands::{work, ping, top, balance, daily};
 use tokio::fs;
 
-use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob, fishing};
+use crate::commands::{requestmydata, deposit, withdraw, donate, checkup, gamba, rob, fishing, captcha};
 use crate::risig::InteractionButton;
 
 mod utils;
@@ -43,7 +43,7 @@ impl EventHandler for Handler {
             let content = if risig_response.message_flags == MessageFlags::EPHEMERAL {
                 risig_response.message
             } else {
-                format!("`{} used {}:`\n{}", user.name, action, risig_response.message)
+                format!("<@{}> used {}:\n{}", user.id, action, risig_response.message)
             };
 
             component.create_interaction_response(&ctx.http, |response| {
@@ -182,6 +182,11 @@ impl EventHandler for Handler {
                     .create_application_command(|command| gamba::register(command)
                         .create_option(|option| {
                             option.name("amount").description("amount to GAMBA").kind(CommandOptionType::Integer).required(true)
+                        })
+                    )
+                    .create_application_command(|command| captcha::register(command)
+                        .create_option(|option| {
+                            option.name("captcha").description("verification text").kind(CommandOptionType::String).required(true)
                         })
                     )
         }).await.unwrap();

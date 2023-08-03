@@ -1,7 +1,9 @@
 use bson::Document;
+use rand_distr::Alphanumeric;
 use serenity::model::{user::User, prelude::interaction::{MessageFlags, application_command::CommandDataOption}};
+use rand::Rng;
 
-use crate::{utils::{get_userdata_doc, save_userdata_doc}, commands::{ping, work, daily, top, balance, fishing, requestmydata, deposit, withdraw, donate, checkup, rob, gamba}};
+use crate::{utils::{get_userdata_doc, save_userdata_doc}, commands::{ping, work, daily, top, balance, fishing, requestmydata, deposit, withdraw, donate, checkup, rob, gamba, captcha}};
 
 pub async fn handle_message(user: User, action: String, args: Option<Vec<CommandDataOption>>) -> ReturnMessage {
     let mut user_data = get_userdata_doc(user.id).await;
@@ -22,9 +24,20 @@ pub async fn handle_message(user: User, action: String, args: Option<Vec<Command
         save_userdata_doc(user.id, &user_data).await;
     }
 
+    if action != "captcha" {
+        if let Some(captcha) = user_data.get("captcha") {
+            let captcha = captcha.as_document().unwrap();
+            let phrase = captcha.get("phrase").unwrap().as_str().unwrap();
+            return ReturnMessage::new(&format!("⚠⚠⚠ CAPTCHA TIME, <@{}> HAVE BEEN DEEMED TO BE A ROBOT!!!! ⚠⚠⚠\nYOU MAY NOT CONTINUE BEFORE YOU TYPE `/captcha {}` THIS WILL RESOLVE THE ISSUE", user.id, phrase), MessageFlags::default());
+        }
+    }
+
     println!("{}: {} ({:?})", user.name, action, args);
 
-    return match action.as_str() {
+    let mut user_data_hidden = user_data.clone();
+    let user_hidden = user.clone();
+
+    let response = match action.as_str() {
         "ping" => ping::run(),
         "work" => work::run(user, user_data).await,
         "daily" => daily::run(user, user_data).await,
@@ -40,10 +53,36 @@ pub async fn handle_message(user: User, action: String, args: Option<Vec<Command
         "checkup" => checkup::run(args.unwrap()).await,
         "rob" => rob::run(user, user_data, args.unwrap()).await,
         "gamba" => gamba::run(user, user_data, args.unwrap()).await,
+        "captcha" => captcha::run(user, user_data, args.unwrap()).await,
         _ => {
             return ReturnMessage::new("command not found", MessageFlags::default());
         }
     };
+
+    if response.message_flags == MessageFlags::EPHEMERAL {
+        let mut pending_captcha = match user_data_hidden.get("pending-captcha") {
+            Some(bson) => bson.as_i64().unwrap(),
+            None => 0
+        };
+
+        pending_captcha += 1;
+
+        if pending_captcha > 5 {
+            let mut captcha = Document::default();
+            let phrase: String = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(8)
+                .map(char::from)
+                .collect();
+            captcha.insert("phrase", phrase);
+            user_data_hidden.insert("captcha", captcha);
+        }
+
+        user_data_hidden.insert("pending-captcha", pending_captcha);
+        save_userdata_doc(user_hidden.id, &user_data_hidden).await;
+    }
+
+    return response;
 }
 
 pub struct InteractionButton {

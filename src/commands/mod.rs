@@ -11,3 +11,4 @@ pub(crate) mod gamba;
 pub(crate) mod rob;
 pub(crate) mod daily;
 pub(crate) mod fishing;
+pub(crate) mod captcha;
